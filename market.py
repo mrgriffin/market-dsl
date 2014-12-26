@@ -1,10 +1,11 @@
 from collections import namedtuple
 
+from state import goal
+
 partition = namedtuple('partition', ['coll', 'by'])
 max = namedtuple('max', ['coll', 'key'])
 
 # TODO: Add missing attributes.
-goal = namedtuple('goal', ['team'])
 collection = namedtuple('collection', ['type'])
 goals = collection(goal)
 
