@@ -36,10 +36,7 @@ goal = namedtuple('goal', ['team'])
 
 football = structure((period(exit=time, incidents=(goal,)),) * 2)
 
-print football
 
-incidents = [period.begin, goal('home'), period.end, period.begin]
-
+incidents = [period.begin, goal('home'), period.end,
+             period.begin, goal('away')]
 state = football(incidents)
-
-print state
