@@ -62,7 +62,7 @@ def typeof_partition(expr):
 
 @typeof.register(collection)
 def typeof_collection(expr):
-    return expr.type
+    return [expr.type]
 
 
 # TODO: Have partition take an attr type as the "by".
