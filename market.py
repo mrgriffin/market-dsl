@@ -49,7 +49,7 @@ def typeof(expr):
 
 @typeof.register(max)
 def typeof_max(expr):
-    return [typeof(expr.coll).keys()[0]]
+    return {typeof(expr.coll).keys()[0]}
 
 
 @typeof.register(partition)
@@ -79,6 +79,4 @@ def members_team(env):
 
 print eval(most_goals, football_state)
 print eval(most_goals, football_nil)
-
-
 print typeof(most_goals)
