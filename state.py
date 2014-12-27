@@ -10,19 +10,23 @@ class Period(object):
         return repr((self.incidents, self.open))
 
 
-def parse_state(structure, incidents):
+# TODO: Other attributes.  Rename team to participant.
+State = namedtuple('State', ['teams', 'periods'])
+
+
+def parse_state(structure, teams, incidents):
     # TODO: Verify that incidents matches the structure.
-    state = []
+    periods = []
     for i in incidents:
         # TODO: Support nested periods.  Requires period-begin to carry
         #       a depth?
         if i is period.begin:
-            state.append(Period([], True))
+            periods.append(Period([], True))
         elif i is period.end:
-            state[-1].open = False
+            periods[-1].open = False
         else:
-            state[-1].incidents.append(i)
-    return state
+            periods[-1].incidents.append(i)
+    return State(teams, periods)
 
 structure = namedtuple('structure', ['periods'])
 structure.__call__ = parse_state
@@ -39,4 +43,5 @@ football = structure((period(exit=time, incidents=(goal,)),) * 2)
 
 incidents = [period.begin, goal('home'), period.end,
              period.begin, goal('away')]
-state = football(incidents)
+state = football(['home', 'away'], incidents)
+nil_state = football(['home', 'away'], [])
