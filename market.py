@@ -25,15 +25,13 @@ def eval(expr, env):
 @eval.register(max)
 def eval_max(expr, env):
     groups = groupby(expr.key, eval(expr.coll, env))
-    try:
-        return groups[__builtin__.max(groups)]
-    except ValueError:
-        return members(typeof(expr.coll).keys()[0], env)
+    return groups[__builtin__.max(groups)]
 
 
 @eval.register(partition)
 def eval_partition(expr, env):
-    return groupby(attrgetter(expr.by), eval(expr.coll, env))
+    groups = groupby(attrgetter(expr.by), eval(expr.coll, env))
+    return {k: groups.get(k, []) for k in members(typeof(expr.by), env)}
 
 
 # TODO: Dispatch on collection type rather than "collection"?
