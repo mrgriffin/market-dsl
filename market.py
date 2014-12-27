@@ -1,4 +1,4 @@
-import __builtin__
+import __builtin__  # Unneeded once eval is separated.
 from collections import namedtuple
 from operator import attrgetter
 
@@ -24,6 +24,7 @@ def eval(expr, env):
 
 @eval.register(max)
 def eval_max(expr, env):
+    # TODO: Support both teams having no goals.
     groups = groupby(expr.key, eval(expr.coll, env))
     return groups[__builtin__.max(groups)]
 
@@ -33,6 +34,7 @@ def eval_partition(expr, env):
     return groupby(attrgetter(expr.by), eval(expr.coll, env))
 
 
+# TODO: Dispatch on collection type rather than "collection"?
 @eval.register(collection)
 def eval_collection(expr, env):
     # TODO: Avoid assuming env is a list of non-nested periods.
@@ -41,3 +43,32 @@ def eval_collection(expr, env):
 
 
 print eval(most_goals, football_state)
+
+
+@singledispatch
+def typeof(expr, env):
+    raise NotImplementedError
+
+
+@typeof.register(max)
+def typeof_max(expr, env):
+    return [typeof(expr.coll, env).keys()[0]]
+
+
+@typeof.register(partition)
+def typeof_partition(expr, env):
+    return {typeof(expr.by, env): typeof(expr.coll, env)}
+
+
+@typeof.register(collection)
+def typeof_collection(expr, env):
+    return expr.type
+
+
+# TODO: Have partition take an attr type as the "by".
+@typeof.register(str)
+def typeof_str(expr, env):
+    return expr
+
+
+print typeof(most_goals, football_state)
