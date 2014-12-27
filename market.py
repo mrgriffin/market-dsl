@@ -46,29 +46,29 @@ print eval(most_goals, football_state)
 
 
 @singledispatch
-def typeof(expr, env):
+def typeof(expr):
     raise NotImplementedError
 
 
 @typeof.register(max)
-def typeof_max(expr, env):
-    return [typeof(expr.coll, env).keys()[0]]
+def typeof_max(expr):
+    return [typeof(expr.coll).keys()[0]]
 
 
 @typeof.register(partition)
-def typeof_partition(expr, env):
-    return {typeof(expr.by, env): typeof(expr.coll, env)}
+def typeof_partition(expr):
+    return {typeof(expr.by): typeof(expr.coll)}
 
 
 @typeof.register(collection)
-def typeof_collection(expr, env):
+def typeof_collection(expr):
     return expr.type
 
 
 # TODO: Have partition take an attr type as the "by".
 @typeof.register(str)
-def typeof_str(expr, env):
+def typeof_str(expr):
     return expr
 
 
-print typeof(most_goals, football_state)
+print typeof(most_goals)
