@@ -113,10 +113,10 @@ def rank_max(expr, env):
     values = valmap(expr.key, coll)
 
     def maxdiff(ks):
-        try:
+        if len(ks) > 1:
             return __builtin__.max(abs(values[a] - values[b])
                                    for a, b in combinations(ks, 2))
-        except ValueError:
+        else:
             if values[ks[0]] == unique_max:
                 return 0
             else:
