@@ -17,15 +17,18 @@ goals = collection(goal)
 most_goals = max(partition(goals, 'team'), key=len)
 
 
+# TODO: Swap parameter order for better partial application.
 @singledispatch
 def eval(expr, env):
     raise NotImplementedError
 
 
+# TODO: Remove key to avoid needing to pattern-match in max handlers.
 @eval.register(max)
 def eval_max(expr, env):
-    groups = groupby(expr.key, eval(expr.coll, env))
-    return groups[__builtin__.max(groups)]
+    def key((k, v)): return expr.key(v)
+    groups = groupby(key, eval(expr.coll, env).iteritems())
+    return {k for k, v in groups[__builtin__.max(groups)]}
 
 
 @eval.register(partition)

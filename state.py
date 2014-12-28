@@ -42,6 +42,6 @@ football = structure((period(exit=time, incidents=(goal,)),) * 2)
 
 
 incidents = [period.begin, goal('home'), period.end,
-             period.begin, goal('away')]
+             period.begin, goal('away'), goal('home')]
 state = football(['home', 'away'], incidents)
 nil_state = football(['home', 'away'], [])
