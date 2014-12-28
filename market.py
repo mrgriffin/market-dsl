@@ -1,22 +1,22 @@
 import __builtin__  # Unneeded once eval is separated.
 from collections import namedtuple
 from itertools import chain, combinations
-from operator import attrgetter
+from operator import attrgetter, itemgetter
 
-from toolz.dicttoolz import valmap
 from toolz.itertoolz import groupby
 from singledispatch import singledispatch
 
 from state import goal, state as football_state, nil_state as football_nil
 
 partition = namedtuple('partition', ['coll', 'by'])
-max = namedtuple('max', ['coll', 'key'])
+len = namedtuple('len', ['coll'])
+max = namedtuple('max', ['coll'])
 
 # TODO: Add missing attributes.
 collection = namedtuple('collection', ['type'])
 goals = collection(goal)
 
-most_goals = max(partition(goals, 'team'), key=len)
+most_goals = max(len(partition(goals, 'team')))
 
 
 # TODO: Swap parameter order for better partial application.
@@ -25,12 +25,16 @@ def eval(expr, env):
     raise NotImplementedError
 
 
-# TODO: Remove key to avoid needing to pattern-match in max handlers.
 @eval.register(max)
 def eval_max(expr, env):
-    def key((k, v)): return expr.key(v)
-    groups = groupby(key, eval(expr.coll, env).iteritems())
+    groups = groupby(itemgetter(1), eval(expr.coll, env).iteritems())
     return {k for k, v in groups[__builtin__.max(groups)]}
+
+
+@eval.register(len)
+def eval_len(expr, env):
+    return {k: __builtin__.len(v)
+            for k, v in eval(expr.coll, env).iteritems()}
 
 
 @eval.register(partition)
@@ -55,6 +59,11 @@ def typeof(expr):
 @typeof.register(max)
 def typeof_max(expr):
     return {typeof(expr.coll).keys()[0]}
+
+
+@typeof.register(len)
+def typeof_len(expr):
+    return {typeof(expr.coll).keys()[0]: int}
 
 
 @typeof.register(partition)
@@ -82,7 +91,8 @@ def members(type, env):
 @members.register(set)
 def members_set(type, env):
     values = members(next(iter(type)), env)
-    combs = (combinations(values, i) for i in xrange(1, len(values) + 1))
+    combs = (combinations(values, i)
+             for i in xrange(1, __builtin__.len(values) + 1))
     return list(chain.from_iterable(combs))
 
 
@@ -104,25 +114,23 @@ def rank(expr, env):
 def rank_max(expr, env):
     coll = eval(expr.coll, env)
 
-    def key((k, v)): return expr.key(v)
-    groups = groupby(key, coll.iteritems())
+    groups = groupby(itemgetter(1), coll.iteritems())
     max = __builtin__.max(groups)
-    unique_max = __builtin__.max(groups) + (len(groups[max]) != 1)
+    unique_max = __builtin__.max(groups) + (__builtin__.len(groups[max]) != 1)
 
     keys = members(typeof(expr), env)
-    values = valmap(expr.key, coll)
 
     def maxdiff(ks):
-        if len(ks) > 1:
-            return __builtin__.max(abs(values[a] - values[b])
+        if __builtin__.len(ks) > 1:
+            return __builtin__.max(abs(coll[a] - coll[b])
                                    for a, b in combinations(ks, 2))
         else:
-            if values[ks[0]] == unique_max:
+            if coll[ks[0]] == unique_max:
                 return 0
             else:
                 # TODO: How does this math change for sports with non-1
                 #       scores (e.g. rugby)?
-                return 1 + max - values[ks[0]]
+                return 1 + max - coll[ks[0]]
 
     return {ks: maxdiff(ks) for ks in keys}
 
