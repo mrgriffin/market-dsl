@@ -3,6 +3,7 @@ from collections import Mapping, namedtuple
 from itertools import chain, combinations
 from operator import attrgetter, itemgetter
 
+import numpy as np
 from toolz.itertoolz import groupby
 from singledispatch import singledispatch
 
@@ -173,6 +174,67 @@ def trend(expr, env0, env1):
     return {k: cmp(rank0[k], rank1[k]) for k in rank0}
 
 
+def gfootball(env):
+    goals_grid = np.array([
+        [.2, .3, .1, .1],
+        [.1, .1, .1, .0],
+        [.0, .0, .0, .0],
+        [.0, .0, .0, .0],
+    ])
+
+    @singledispatch
+    def calculate(expr):
+        raise NotImplementedError
+
+    @calculate.register(len)
+    def calculate_len(expr):
+        grid = calculate(expr.coll)
+        if isinstance(grid, Mapping):
+            return {
+                k: {i: sum(grid[k][j, i - j] for j in xrange(0, i + 1))
+                    for i in xrange(0, grid[k].shape[0])}
+                for k in grid
+            }
+        else:
+            return {
+                i: sum(grid[j, i - j] for j in xrange(0, i + 1))
+                for i in xrange(0, grid.shape[0])
+            }
+
+    @calculate.register(partition)
+    def calculate_partition(expr):
+        # TODO: Support non-team partitioning.
+        assert expr.by == 'team'
+        grid = calculate(expr.coll)
+        # TODO: Use masked arrays and share the data.
+        home = np.zeros(grid.shape)
+        draw = np.zeros(grid.shape)
+        away = np.zeros(grid.shape)
+
+        for i in xrange(0, grid.shape[0]):
+            for j in xrange(0, grid.shape[1]):
+                if i > j:
+                    home[i, j] = grid[i, j]
+                elif i == j:
+                    draw[i, j] = grid[i, j]
+                else:
+                    away[i, j] = grid[i, j]
+
+        return {('home',): home, ('home', 'away'): draw, ('away',): away}
+
+    # TODO: Does this make sense?
+    @calculate.register(max)
+    def calculate_max(expr):
+        grid = calculate(expr.coll)
+        return {k: sum(v.itervalues()) for k, v in grid.iteritems()}
+
+    @calculate.register(collection)
+    def calculate_collection(expr):
+        return goals_grid
+
+    return calculate
+
+
 print eval(most_goals, football_state)
 print eval(most_goals, football_nil)
 print typeof(most_goals)
@@ -183,3 +245,7 @@ print eval(total_goals, football_state)
 print eval(total_goals, football_nil)
 print typeof(total_goals)
 print trend(total_goals, football_nil, football_state)
+
+calculate = gfootball(football_state)
+print calculate(most_goals)
+print calculate(total_goals)
