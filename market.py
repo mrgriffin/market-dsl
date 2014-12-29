@@ -1,5 +1,5 @@
 import __builtin__  # Unneeded once eval is separated.
-from collections import namedtuple
+from collections import Mapping, namedtuple
 from itertools import chain, combinations
 from operator import attrgetter, itemgetter
 
@@ -17,6 +17,7 @@ collection = namedtuple('collection', ['type'])
 goals = collection(goal)
 
 most_goals = max(len(partition(goals, 'team')))
+total_goals = len(goals)
 
 
 # TODO: Swap parameter order for better partial application.
@@ -31,10 +32,14 @@ def eval_max(expr, env):
     return {k for k, v in groups[__builtin__.max(groups)]}
 
 
+# TODO: Separate mapping and iterable len.
 @eval.register(len)
 def eval_len(expr, env):
-    return {k: __builtin__.len(v)
-            for k, v in eval(expr.coll, env).iteritems()}
+    coll = eval(expr.coll, env)
+    if isinstance(coll, Mapping):
+        return {k: __builtin__.len(v) for k, v in coll.iteritems()}
+    else:
+        return sum(1 for _ in coll)
 
 
 @eval.register(partition)
@@ -63,7 +68,11 @@ def typeof_max(expr):
 
 @typeof.register(len)
 def typeof_len(expr):
-    return {typeof(expr.coll).keys()[0]: int}
+    coll = typeof(expr.coll)
+    if isinstance(coll, Mapping):
+        return {coll.keys()[0]: int}
+    else:
+        return int
 
 
 @typeof.register(partition)
@@ -146,3 +155,7 @@ print eval(most_goals, football_nil)
 print typeof(most_goals)
 print trend(most_goals, football_nil, football_state)
 print trend(most_goals, football_nil, football_nil)
+
+print eval(total_goals, football_state)
+print eval(total_goals, football_nil)
+print typeof(total_goals)
