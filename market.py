@@ -114,7 +114,7 @@ def members_str(type, env):
 #       approximate sensible values for expressions of the preceeding type.
 @members.register(type)
 def members_int(type, env):
-    return range(0, 11)
+    return range(0, 10) + ['10+']
 
 
 def members_team(env):
@@ -156,7 +156,9 @@ def rank_len(expr, env):
     len = eval(expr, env)
 
     def rank(l):
-        if l < len:
+        if isinstance(l, str) and l.endswith('+'):
+            return int(l[:-1]) - len
+        elif l < len:
             # TODO: Is inf the right way to mark impossible outcomes?
             return float('inf')
         else:
