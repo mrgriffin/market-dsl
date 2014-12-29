@@ -110,6 +110,13 @@ def members_str(type, env):
     return globals()['members_' + type](env)
 
 
+# TODO: Return integral ranges as the type of expressions.  The range should
+#       approximate sensible values for expressions of the preceeding type.
+@members.register(type)
+def members_int(type, env):
+    return range(0, 11)
+
+
 def members_team(env):
     return env.teams
 
@@ -144,6 +151,20 @@ def rank_max(expr, env):
     return {ks: maxdiff(ks) for ks in keys}
 
 
+@rank.register(len)
+def rank_len(expr, env):
+    len = eval(expr, env)
+
+    def rank(l):
+        if l < len:
+            # TODO: Is inf the right way to mark impossible outcomes?
+            return float('inf')
+        else:
+            return l - len
+
+    return {k: rank(k) for k in members(typeof(expr), env)}
+
+
 def trend(expr, env0, env1):
     rank0 = rank(expr, env0)
     rank1 = rank(expr, env1)
@@ -159,3 +180,4 @@ print trend(most_goals, football_nil, football_nil)
 print eval(total_goals, football_state)
 print eval(total_goals, football_nil)
 print typeof(total_goals)
+print trend(total_goals, football_nil, football_state)
