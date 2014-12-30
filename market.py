@@ -1,5 +1,5 @@
 import __builtin__  # Unneeded once eval is separated.
-from collections import Mapping, namedtuple
+from collections import namedtuple
 from itertools import chain, combinations
 from operator import attrgetter, itemgetter
 
@@ -12,12 +12,13 @@ from state import goal, state as football_state, nil_state as football_nil
 partition = namedtuple('partition', ['coll', 'by'])
 len = namedtuple('len', ['coll'])
 max = namedtuple('max', ['coll'])
+map = namedtuple('map', ['coll', 'fn'])
 
 # TODO: Add missing attributes.
 collection = namedtuple('collection', ['type'])
 goals = collection(goal)
 
-most_goals = max(len(partition(goals, 'team')))
+most_goals = max(map(partition(goals, 'team'), len))
 total_goals = len(goals)
 
 
@@ -36,11 +37,18 @@ def eval_max(expr, env):
 # TODO: Separate mapping and iterable len.
 @eval.register(len)
 def eval_len(expr, env):
-    coll = eval(expr.coll, env)
-    if isinstance(coll, Mapping):
-        return {k: __builtin__.len(v) for k, v in coll.iteritems()}
-    else:
-        return sum(1 for _ in coll)
+    return sum(1 for _ in eval(expr.coll, env))
+
+
+@eval.register(map)
+def eval_map(expr, env):
+    # TODO: Use eval_len.  Need to split AST eval from len calculation.
+    fn = globals()['eval_map_' + expr.fn.__name__]
+    return {k: fn(v) for k, v in eval(expr.coll, env).iteritems()}
+
+
+def eval_map_len(coll):
+    return sum(1 for _ in coll)
 
 
 @eval.register(partition)
@@ -69,11 +77,14 @@ def typeof_max(expr):
 
 @typeof.register(len)
 def typeof_len(expr):
+    return int
+
+
+@typeof.register(map)
+def typeof_map(expr):
+    # TODO: What should fn be instantiated with?
     coll = typeof(expr.coll)
-    if isinstance(coll, Mapping):
-        return {coll.keys()[0]: int}
-    else:
-        return int
+    return {coll.keys()[0]: typeof(expr.fn(None))}
 
 
 @typeof.register(partition)
@@ -189,17 +200,21 @@ def gfootball(env):
     @calculate.register(len)
     def calculate_len(expr):
         grid = calculate(expr.coll)
-        if isinstance(grid, Mapping):
-            return {
-                k: {i: sum(grid[k][j, i - j] for j in xrange(0, i + 1))
-                    for i in xrange(0, grid[k].shape[0])}
-                for k in grid
-            }
-        else:
-            return {
-                i: sum(grid[j, i - j] for j in xrange(0, i + 1))
-                for i in xrange(0, grid.shape[0])
-            }
+        return {
+            i: sum(grid[j, i - j] for j in xrange(0, i + 1))
+            for i in xrange(0, grid.shape[0])
+        }
+
+    @calculate.register(map)
+    def calculate_map(expr):
+        assert expr.fn == len
+        # TODO: Lift len into its own function.
+        grid = calculate(expr.coll)
+        return {
+            k: {i: sum(grid[k][j, i - j] for j in xrange(0, i + 1))
+                for i in xrange(0, grid[k].shape[0])}
+            for k in grid
+        }
 
     @calculate.register(partition)
     def calculate_partition(expr):
