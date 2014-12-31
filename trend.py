@@ -4,55 +4,49 @@ from operator import itemgetter
 from singledispatch import singledispatch
 from toolz.itertoolz import groupby
 
-import market
+from market import walker
 from result import eval, members
 from selection import typeof
 
 
-@singledispatch
-def rank(expr, env):
-    raise NotImplementedError
+class rank(walker):
+    def max(expr, env):
+        coll = eval(expr.coll, env)
 
+        groups = groupby(itemgetter(1), coll.iteritems())
+        maxgroup = max(groups)
+        unique_max = max(groups) + (len(groups[maxgroup]) != 1)
 
-@rank.register(market.max)
-def rank_max(expr, env):
-    coll = eval(expr.coll, env)
+        keys = members(typeof(expr), env)
 
-    groups = groupby(itemgetter(1), coll.iteritems())
-    maxgroup = max(groups)
-    unique_max = max(groups) + (len(groups[maxgroup]) != 1)
-
-    keys = members(typeof(expr), env)
-
-    def maxdiff(ks):
-        if len(ks) > 1:
-            return max(abs(coll[a] - coll[b])
-                       for a, b in combinations(ks, 2))
-        else:
-            if coll[ks[0]] == unique_max:
-                return 0
+        def maxdiff(ks):
+            if len(ks) > 1:
+                return max(abs(coll[a] - coll[b])
+                        for a, b in combinations(ks, 2))
             else:
-                # TODO: How does this math change for sports with non-1
-                #       scores (e.g. rugby)?
-                return 1 + maxgroup - coll[ks[0]]
+                if coll[ks[0]] == unique_max:
+                    return 0
+                else:
+                    # TODO: How does this math change for sports with non-1
+                    #       scores (e.g. rugby)?
+                    return 1 + maxgroup - coll[ks[0]]
 
-    return {ks: maxdiff(ks) for ks in keys}
+        return {ks: maxdiff(ks) for ks in keys}
 
+    # TODO: Avoid shadowing len and rank.
+    def len(expr, env):
+        len = eval(expr, env)
 
-@rank.register(market.len)
-def rank_len(expr, env):
-    len = eval(expr, env)
+        def rank(l):
+            if isinstance(l, str) and l.endswith('+'):
+                return int(l[:-1]) - len
+            elif l < len:
+                # TODO: Is inf the right way to mark impossible outcomes?
+                return float('inf')
+            else:
+                return l - len
 
-    def rank(l):
-        if isinstance(l, str) and l.endswith('+'):
-            return int(l[:-1]) - len
-        elif l < len:
-            # TODO: Is inf the right way to mark impossible outcomes?
-            return float('inf')
-        else:
-            return l - len
-
-    return {k: rank(k) for k in members(typeof(expr), env)}
+        return {k: rank(k) for k in members(typeof(expr), env)}
 
 
 def trend(expr, env0, env1):

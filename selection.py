@@ -1,41 +1,29 @@
 from singledispatch import singledispatch
 
-import market
+from market import walker
 
 
-@singledispatch
-def typeof(expr):
-    raise NotImplementedError
+class typeof(walker):
+    def max(expr):
+        return {typeof(expr.coll).keys()[0]}
 
+    def len(expr):
+        return int
 
-@typeof.register(market.max)
-def typeof_max(expr):
-    return {typeof(expr.coll).keys()[0]}
+    def map(expr):
+        # TODO: What should fn be instantiated with?
+        coll = typeof(expr.coll)
+        return {coll.keys()[0]: typeof(expr.fn(None))}
 
+    def partition(expr):
+        return {typeof(expr.by): typeof(expr.coll)}
 
-@typeof.register(market.len)
-def typeof_len(expr):
-    return int
-
-
-@typeof.register(market.map)
-def typeof_map(expr):
-    # TODO: What should fn be instantiated with?
-    coll = typeof(expr.coll)
-    return {coll.keys()[0]: typeof(expr.fn(None))}
-
-
-@typeof.register(market.partition)
-def typeof_partition(expr):
-    return {typeof(expr.by): typeof(expr.coll)}
-
-
-@typeof.register(market.collection)
-def typeof_collection(expr):
-    return [expr.type]
+    def collection(expr):
+        return [expr.type]
 
 
 # TODO: Have partition take an attr type as the "by".
+# TODO: Avoid requiring that walkers are implemented with singledispatch.
 @typeof.register(str)
 def typeof_str(expr):
     return expr

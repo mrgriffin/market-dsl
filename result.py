@@ -4,51 +4,34 @@ from operator import attrgetter, itemgetter
 from singledispatch import singledispatch
 from toolz.itertoolz import groupby
 
-import market
+from market import walker
 from selection import typeof
 
 
-# TODO: Swap parameter order for better partial application.
-@singledispatch
-def eval(expr, env):
-    raise NotImplementedError
+class eval(walker):
+    def max(expr, env):
+        groups = groupby(itemgetter(1), eval(expr.coll, env).iteritems())
+        return {k for k, v in groups[max(groups)]}
 
+    def len(expr, env):
+        return sum(1 for _ in eval(expr.coll, env))
 
-@eval.register(market.max)
-def eval_max(expr, env):
-    groups = groupby(itemgetter(1), eval(expr.coll, env).iteritems())
-    return {k for k, v in groups[max(groups)]}
+    def map(expr, env):
+        # TODO: Use eval.len?  Need to split AST eval from len calculation.
+        fn = globals()['eval_map_' + expr.fn.__name__]
+        return {k: fn(v) for k, v in eval(expr.coll, env).iteritems()}
 
+    def partition(expr, env):
+        groups = groupby(attrgetter(expr.by), eval(expr.coll, env))
+        return {k: groups.get(k, []) for k in members(typeof(expr.by), env)}
 
-# TODO: Separate mapping and iterable len.
-@eval.register(market.len)
-def eval_len(expr, env):
-    return sum(1 for _ in eval(expr.coll, env))
-
-
-@eval.register(market.map)
-def eval_map(expr, env):
-    # TODO: Use eval_len.  Need to split AST eval from len calculation.
-    fn = globals()['eval_map_' + expr.fn.__name__]
-    return {k: fn(v) for k, v in eval(expr.coll, env).iteritems()}
-
+    def collection(expr, env):
+        # TODO: Avoid assuming env is a list of non-nested periods.
+        incidents = (i for p in env.periods for i in p.incidents)
+        return (i for i in incidents if isinstance(i, expr.type))
 
 def eval_map_len(coll):
     return sum(1 for _ in coll)
-
-
-@eval.register(market.partition)
-def eval_partition(expr, env):
-    groups = groupby(attrgetter(expr.by), eval(expr.coll, env))
-    return {k: groups.get(k, []) for k in members(typeof(expr.by), env)}
-
-
-# TODO: Dispatch on collection type rather than "collection"?
-@eval.register(market.collection)
-def eval_collection(expr, env):
-    # TODO: Avoid assuming env is a list of non-nested periods.
-    incidents = (i for p in env.periods for i in p.incidents)
-    return (i for i in incidents if isinstance(i, expr.type))
 
 
 @singledispatch
