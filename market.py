@@ -10,6 +10,3 @@ map = namedtuple('map', ['coll', 'fn'])
 # TODO: Add missing attributes.
 collection = namedtuple('collection', ['type'])
 goals = collection(goal)
-
-most_goals = max(map(partition(goals, 'team'), len))
-total_goals = len(goals)

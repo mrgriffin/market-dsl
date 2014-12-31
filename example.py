@@ -1,11 +1,15 @@
 from state import state as football_state, nil_state as football_nil
-from market import most_goals, total_goals
 
 from result import eval as result
 from selection import typeof as selns
 from trend import trend
 from gfootball import gfootball
 
+from market import *
+
+
+most_goals = max(map(partition(goals, 'team'), len))
+total_goals = len(goals)
 
 print result(most_goals, football_state)
 print result(most_goals, football_nil)
