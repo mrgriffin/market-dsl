@@ -1,17 +1,25 @@
 from collections import namedtuple
 
 from singledispatch import singledispatch
+from toolz.dicttoolz import valmap
 
 from state import goal
 
-partition = namedtuple('partition', ['coll', 'by'])
-len = namedtuple('len', ['coll'])
-max = namedtuple('max', ['coll'])
-map = namedtuple('map', ['coll', 'fn'])
+operations = {op.__name__: op for op in (
+    namedtuple('partition', ['coll', 'by']),
+    namedtuple('len', ['coll']),
+    namedtuple('max', ['coll']),
+    namedtuple('map', ['coll', 'fn']),
+    namedtuple('collection', ['type']),
+)}
 
-# TODO: Add missing attributes.
-collection = namedtuple('collection', ['type'])
-goals = collection(goal)
+collections = valmap(operations['collection'], {
+    'goals': goal,
+})
+
+globals().update(operations)
+globals().update(collections)
+__all__ = operations.keys() + collections.keys()
 
 class walker(object):
     class __metaclass__(type):
@@ -26,6 +34,6 @@ class walker(object):
 
             for name, method in methods.iteritems():
                 if not name.startswith('__'):
-                    dispatch.register(globals()[name])(method)
+                    dispatch.register(operations[name])(method)
 
             return dispatch
