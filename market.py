@@ -23,17 +23,20 @@ __all__ = operations.keys() + collections.keys()
 
 class walker(object):
     class __metaclass__(type):
-        def __new__(cls, name, bases, methods):
+        def __new__(cls, name, bases, attrs):
             # Make walker a regular class so it can be subclassed.
             if bases == (object,):
-                return type.__new__(cls, name, bases, methods)
+                return type.__new__(cls, name, bases, attrs)
 
             @singledispatch
             def dispatch(*args):
                 raise NotImplementedError
 
-            for name, method in methods.iteritems():
+            dispatch.__name__ = name
+            dispatch.__doc__ = attrs.get('__doc__')
+
+            for name, attr in attrs.iteritems():
                 if not name.startswith('__'):
-                    dispatch.register(operations[name])(method)
+                    dispatch.register(operations[name])(attr)
 
             return dispatch
