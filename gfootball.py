@@ -1,5 +1,4 @@
 import numpy as np
-from singledispatch import singledispatch
 
 import market
 from market import walker
@@ -58,5 +57,34 @@ def gfootball(env):
 
         def collection(expr):
             return goals_grid
+
+        def nth(expr):
+            grid = calculate(expr.coll)
+            nth = np.zeros(grid.shape)
+            n = expr.n + 1
+            for i in xrange(0, n + 1):
+                nth[i, n - i] = grid[i, n - i]
+            nth *= 1 / np.sum(nth)
+            return nth
+
+        # HINT: This would explode for all goals after the first because
+        #       the diagonal will have a value.  The diagonals need to be
+        #       converted into a home and an away value.
+        def attr(expr):
+            assert expr.attr == 'team'
+            grid = calculate(expr.elem)
+            # TODO: Use partition to do the heavy lifting.
+            home = 0
+            away = 0
+            for i in xrange(0, grid.shape[0]):
+                for j in xrange(0, grid.shape[1]):
+                    if i > j:
+                        home += grid[i, j]
+                    elif j > i:
+                        away += grid[i, j]
+                    else:
+                        assert grid[i, j] == 0
+
+            return {'home': home, 'away': away}
 
     return calculate
