@@ -1,5 +1,3 @@
-from singledispatch import singledispatch
-
 from market import walker
 
 
