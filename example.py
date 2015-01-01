@@ -11,6 +11,7 @@ from market import supports
 
 most_goals = max(map(partition(goals, 'team'), len))
 total_goals = len(goals)
+first_goal = attr(nth(goals, 0), 'team')
 
 assert supports(result, most_goals)
 assert supports(result, total_goals)

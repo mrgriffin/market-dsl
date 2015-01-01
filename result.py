@@ -2,7 +2,7 @@ from itertools import chain, combinations
 from operator import attrgetter, itemgetter
 
 from singledispatch import singledispatch
-from toolz.itertoolz import groupby
+from toolz.itertoolz import groupby, nth
 
 from market import walker
 from selection import typeof
@@ -29,6 +29,19 @@ class eval(walker):
         # TODO: Avoid assuming env is a list of non-nested periods.
         incidents = (i for p in env.periods for i in p.incidents)
         return (i for i in incidents if isinstance(i, expr.type))
+
+    def nth(expr, env):
+        try:
+            return nth(expr.n, eval(expr.coll, env))
+        except StopIteration:
+            return None
+
+    def attr(expr, env):
+        elem = eval(expr.elem, env)
+        try:
+            return getattr(elem, expr.attr)
+        except AttributeError:
+            return None
 
 def eval_map_len(coll):
     return sum(1 for _ in coll)

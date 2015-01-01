@@ -12,6 +12,8 @@ operations = {op.__name__: op for op in (
     namedtuple('max', ['coll']),
     namedtuple('map', ['coll', 'fn']),
     namedtuple('collection', ['type']),
+    namedtuple('attr', ['elem', 'attr']),
+    namedtuple('nth', ['coll', 'n']),
 )}
 
 collections = valmap(operations['collection'], {
