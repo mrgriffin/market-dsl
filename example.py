@@ -6,10 +6,18 @@ from trend import trend
 from gfootball import gfootball
 
 from market import *
+from market import supports
 
 
 most_goals = max(map(partition(goals, 'team'), len))
 total_goals = len(goals)
+
+assert supports(result, most_goals)
+assert supports(result, total_goals)
+assert supports(trend, most_goals)
+assert supports(trend, total_goals)
+assert supports(selns, most_goals)
+assert supports(selns, total_goals)
 
 print result(most_goals, football_state)
 print result(most_goals, football_nil)

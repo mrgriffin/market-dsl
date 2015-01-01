@@ -1,4 +1,5 @@
 from collections import namedtuple
+from itertools import chain, ifilter, imap
 
 from singledispatch import singledispatch
 from toolz.dicttoolz import valmap
@@ -21,6 +22,8 @@ globals().update(operations)
 globals().update(collections)
 __all__ = operations.keys() + collections.keys()
 
+
+# TODO: Should isinstance(..., walker) work?
 class walker(object):
     class __metaclass__(type):
         def __new__(cls, name, bases, attrs):
@@ -40,3 +43,19 @@ class walker(object):
                     dispatch.register(operations[name])(attr)
 
             return dispatch
+
+
+def isoperation(expr):
+    return expr in operations.viewvalues()
+
+
+# TODO: Name this better.
+def flatten(expr):
+    subexprs = chain.from_iterable(ifilter(isoperation, expr))
+    return {type(expr)} | set(imap(flatten, subexprs))
+
+
+# TODO: Check for support for collection types, map functions etc.
+def supports(walker, expr):
+    ops = flatten(expr)
+    return all(e in walker.registry for e in ops)

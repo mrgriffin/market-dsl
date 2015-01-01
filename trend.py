@@ -1,7 +1,6 @@
 from itertools import combinations
 from operator import itemgetter
 
-from singledispatch import singledispatch
 from toolz.itertoolz import groupby
 
 from market import walker
@@ -22,7 +21,7 @@ class rank(walker):
         def maxdiff(ks):
             if len(ks) > 1:
                 return max(abs(coll[a] - coll[b])
-                        for a, b in combinations(ks, 2))
+                           for a, b in combinations(ks, 2))
             else:
                 if coll[ks[0]] == unique_max:
                     return 0
@@ -53,3 +52,6 @@ def trend(expr, env0, env1):
     rank0 = rank(expr, env0)
     rank1 = rank(expr, env1)
     return {k: cmp(rank0[k], rank1[k]) for k in rank0}
+
+# TODO: Use a better approach to making wrapper functions respond to supports.
+trend.registry = rank.registry
