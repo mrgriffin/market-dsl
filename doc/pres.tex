@@ -1,0 +1,174 @@
+\documentclass{beamer}
+\mode<presentation>
+\title{Experiments as functions of state}
+\date{2015-01-08}
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}
+\frametitle{Warning!}
+Some of the terminology used could be wrong.
+
+I'm not a mathematician or a type theorist.
+\end{frame}
+
+\section{Motivation}
+\begin{frame}
+\frametitle{Motivation}
+If there was a language for describing markets we could develop algorithms
+which operation on statements in that language.  Those algorithms would work
+for an arbitrary market.
+\end{frame}
+
+\section{Language}
+\begin{frame}
+\frametitle{Simplification}
+Only markets whose selections are \emph{collectively exhaustive} and
+\emph{mutually exclusive} are modeled.  Such markets could also be called
+\alert{sample spaces} and their selections \alert{outcomes} or
+\alert{elementary events}.
+
+\begin{columns}
+\column{0.5\textwidth}
+Definable:
+\begin{itemize}
+\item Match result
+\item Correct score
+\end{itemize}
+\column{0.5\textwidth}
+Undefinable:
+\begin{itemize}
+\item Double chance
+\item Correct score, can't lose
+\end{itemize}
+\end{columns}
+
+Markets that cannot be defined in this model can be represented as a
+composition of sample spaces.
+\end{frame}
+
+\begin{frame}
+\frametitle{Composition}
+Each market contains selections which are composed of one or more outcomes
+from a sample space.
+
+\begin{example}
+Correct score, can't lose has a selection for each ``true'' outcome of the
+set of ``will the score be $x$--$y$ in the match?'' sample spaces.
+\end{example}
+
+\begin{example}
+Double chance has a selection that negates a corresponding selection in the
+``which team will score the most goals?'' sample space.
+\end{example}
+\end{frame}
+
+\begin{frame}
+\frametitle{Example experiments}
+\begin{description}
+\item[total goals] len(goals)
+\item[correct score] map(partition(goals, 'participant'), len)
+\item[most goals] max(map(partition(goals, 'participant'), len))
+\end{description}
+
+\begin{description}
+\item[len(coll)] the number of elements in \emph{coll}
+\item[partition(coll, attr)] a mapping of the values of \emph{attr} to the
+collection of elements with those values
+\item[map(mapping, fn)] applies \emph{fn} to each value in \emph{mapping}
+\item[max(mapping)] the set of keys with the maximum value
+\end{description}
+\end{frame}
+
+\begin{frame}
+\frametitle{Example experiments}
+\begin{example}[half-time full-time]
+map(partition(filter(goals, period(0)), 'participant'), len) $\times$
+
+map(partition(filter(goals, period(1)), 'participant'), len)
+\end{example}
+
+\begin{description}
+\item[filter(coll, pred)] elements in \emph{coll} that satisfy \emph{pred}
+\item[a $\times$ b] product of \emph{a} and \emph{b}
+\end{description}
+\end{frame}
+
+\begin{frame}
+\frametitle{Functions of state}
+The previous examples are unary functions taking the state of an event.  The
+state parameter can be omitted because it is always present.
+
+\begin{description}
+\item[total goals] len(goals)
+\item[total-goals(state)] len(state.goals)
+\end{description}
+\end{frame}
+
+\begin{frame}
+\frametitle{Parameters}
+Definitions can contain references to undefined names which are taken to be
+parameters to the experiment.
+
+\begin{description}
+\item[nth goal scorer] attr(nth(goals, \emph{n}), 'participant')
+\item[nth-goal-scorer(state)] \ldots
+\end{description}
+
+\begin{description}
+\item[nth(coll, n)] the \emph{n}th element of \emph{coll}
+\item[attr(elem, attr)] \emph{elem}.\emph{attr}
+\end{description}
+\end{frame}
+
+\begin{frame}
+\frametitle{Parameters type inference}
+\begin{description}
+\item[nth goal scorer] attr(nth(goals, \emph{n}), 'participant')
+\item[first event scorer] attr(nth(\emph{c}, 0), 'participant')
+\end{description}
+
+nth takes a collection and a natural number, thus the trader is prompted to
+provide a value of the correct type when adding the sample space to a market.
+If he does not provide a value a market is created for each possible value of
+each parameter.
+
+The algorithms never receive functions with unfixed parameters except
+\emph{state}.
+\end{frame}
+
+\section{Algorithms}
+\begin{frame}
+\frametitle{Manipulating functions}
+Functions are simply abstract syntax trees.
+
+Most algorithms will simply dispatch on the type of the node and invoke
+themselves recursively on children.
+
+These implementations are suitable for memoization.
+\end{frame}
+
+\begin{frame}
+\frametitle{Human-readable name}
+\begin{description}
+\item[len(coll)] "total " + describe(coll)
+\item[goals] "goals"
+\item[partition(coll, attr)] describe(coll) + " by " + attr
+\item[map(coll, fn)] describe(fn(coll))
+\end{description}
+
+\begin{example}[describe(correct score)]
+\begin{enumerate}
+\item describe(map(partition(goals, 'participant'), len))
+\item describe(len(partition(goals, 'participant')))
+\item "total " + describe(partition(goals, 'participant'))
+\item "total " + desc(goals) + " by " + "participant"
+\item "total goals by participant"
+\end{enumerate}
+\end{example}
+\end{frame}
+
+\end{document}
