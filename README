@@ -3,3 +3,101 @@ Flawed prototype of a DSL for defining markets at Geneity.
 2014's Christmas project.
 
 See http://www.martin-griffin.com/blog/geneity.html#market-dsl
+
+---
+
+Hi all,
+
+I finally got around to creating some proof of concept code for
+representing markets as functions of the state of an event (realized as
+an expression that transforms a property of the state).  It's looking
+very promising, I have a pretty clear idea of how to evolve the design
+and implement the features I want.
+
+Here's an example of some of the stuff it can do already (based on
+example.py):
+
+
+# No goals.
+>>> football0 = football(['home', 'away'], [])
+
+# Home has scored one goal.
+>>> football1 = football(['home', 'away'], [period.begin, goal('home')])
+
+# MRES.  The team(s) that has scored the max number of goals.
+>>> most_goals = max(map(partition(goals, 'team'), len))
+
+# A tie is represented as both teams, so we can support n-way sports.
+>>> result(most_goals, football0)
+set(['home', 'away'])
+
+>>> result(most_goals, football1)
+set(['home'])
+
+# How we expect the prices to shift between football0 and football1.
+# TODO: The keys of this dict should be sets like for result.
+>>> trend(most_goals, football0, football1)
+{('home', 'away'): -1, ('away',): -1, ('home',): 1}
+
+# There's a static grid in gfootball.py that favors away.
+# TODO: The keys of this dict should be sets like for result.
+>>> calculate = gfootball(football0)
+>>> calculate(most_goals)
+{('home', 'away'): 0.3 ('away',): 0.6 ('home',): 0.1}
+
+
+example.py also contains TOTG and something similar to FGSC but with
+teams as selections.
+
+The code itself is... okay.  It's very much a work in progress and many
+things that you would expect to work will blow up with an AssertionError
+(if you're lucky!)  Some of the algorithm code I know is wrong and yet
+more of it is likely wrong without me having realized yet.  The next
+things I'll be working on are, in roughly priority order:
+
+- Support attr and nth in trend.
+
+- Choose a better (and consistent!) set of names for the modules,
+functions and variables.
+
+- Add tests that verify eval, trend and calculate are in-line with each
+other; e.g. if eval(expr, state) has a result then
+calculate(state)(expr) should return 1 for that result and 0 for the others.
+
+- Make gfootball look at the state when creating its grid; currently you
+get some very interesting results when asking for the probabilities of
+an event that has goals.
+
+- Make eval fail if the periods it is looking at are open.
+
+- Extend typeof so that it returns more useful, non-adhoc types; rewrite
+members so that it uses those types.
+
+- Support market definitions with free variables (e.g.
+most_goals_in_period where which period isn't specified in the
+definition); this is equivalent to market extras.
+
+- Reorder parameters to eval etc so that the most likely to be fixed
+parameters are on the left (makes partial application possible); this
+requires using something other than singledispatch.
+
+- Add automatic dispatching on properties of the operations that
+couldn't reasonably have identical implementations, e.g., the function
+to map or the collection to retrieve.
+
+- Infer which markets could be handicapped, over-under-ed and
+odd-even-ed (are there more?).
+
+- Infer the data currently in tMktSortSport.
+
+- Overhaul state; it's a quick hack currently, and I think I have a much
+better design that will lend itself to a similar level of introspection
+(e.g. to automatically build the in-play UIs).
+
+I'm pretty sure that, if we wanted to, we could incorporate this code
+into the legacy sportsbook without *too* much effort.  Let me know if
+you think this is worth pursuing and I'll try to come up with a
+migration plan as I work.
+
+As usual your feedback is greatly appreciated,
+  Martin
