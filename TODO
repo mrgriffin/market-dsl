@@ -1,0 +1,146 @@
+MRES/HCMR: Which team scored the most goals?
+max(map(partition(goals, team), len))
+
+! Which team scored the most xs?
+most(coll) = max(map(partition(coll, team), len))
+
+H1RS/HCH1: Which team scored the most goals in the first half?
+most(filter(goals, eq(period, 0)))
+! eq(fn, v) returns a predicate p(x) = (fn(x) == v)
+! period(i) returns the period that an incident occurred in
+? what does period return for a tennis point incident?
+
+! Which team scored the most xs in period n?
+most_in(coll, n) = most(filter(coll, eq(period, n)))
+
+TWMC/CHF3: Which team scored the most corners?
+most(corners)
+
+! allow filtered collections to be bound; most and most_in become one
+! name collections on a per-sport basis: first-half, full-time, extra-time
+
+WROM: Which team will win the rest of the match?
+? What does rest of the match mean?  If from the current second we want to
+? avoid reifying the market in the DB.  Resulting can cope with a bound
+? expression for each instance of t that was bet on.  The algorithm can be
+? passed the expression bound to the current time whenever it is invoked.
+most(filter(goals, ge(time, t)))
+
+MOFW: Which team will win and in which period will they win?
+? Assuming here that goals scored in penalties are included in goals.
+? First-Half can be returned from this expression; aggregation must be done.
+most(goals) * period(nth(goals, -1))
+! nth supports negative indexes which read from the end
+most(goals) * nth(periods, -1)
+! periods is a collection of collections of goals
+
+MGTP: Will the match go to penalties?
+gt(len(periods), 3)
+
+WIET: Which team will win in extra time?
+= MOFW where period == 2
+! partial markets that only include a subset of the outcomes should scale
+! their selections to 100%.  unlike aggregate markets, partial markets take
+! their selections from a single sample space.  it is not safe to scale
+! aggregate markets to 100% because it could contain more than that much
+! probability (e.g. double chance)
+
+DNOB/AHCP: Which team scored the most goals (no draw)?
+= MRES without the {:home, :away} selection
+
+AHRH: Which team will win the rest of the first half (no draw)?
+partial market of:
+most(filter(goals, and(eq(period, 0), gt(time, t))))
+! and(p1, p2) returns a predicate that checks p1 and p2
+% and(p1, p2, ...) = and(p1, and(p2, ...))
+
+! infer 2-way partial markets from 3-way team sample spaces (i.e. type(ss)
+! is P(Team) - Ø).
+
+HNOB: Which team will win (no home)?
+= MRES without the {:home} selection
+
+HTFT: Which team will win at half-time and at full-time?
+most_in(goals, 0) * most(goals)
+? does it make sense for distinct parameters to be bound to the same value?
+? overlapping values are fine (e.g. as above)
+
+GSBH: Will a goal be scored in both halves?
+and(gt(len(filter(goals, eq(period, 0))), 0),
+    gt(len(filter(goals, eq(period, 1))), 0))
+
+WIEH: Will a team win either half?
+= HTFT aggregate
+? how important is it that this market cannot be defined as a non-aggregate
+? market?
+reduceby(map(partition(partition(goals, team), period), gt(len, 0)), or)
+! a partition of a mapping could be defined as T -> U -> C but this overloads
+! the meaning of partition and complicates map; does it map over U -> C or
+! just C?
+! reduceby T -> V -> C op returns V -> reduce(C, op).  this is an insane
+! operation that only exists to let me define a sample space that doesn't
+! sum to 100%?
+
+HWMG: In which half will the most goals be scored?
+max(map(partition(goals, period), len))
+! strictly speaking this would include extra-time and penalties; we need to
+! use filter(goals, lt(period, 2)).
+
+! partial markets are subset markets.
+
+BSCO: Will both teams score?
+map(map(partition(goals, team), len), gt(0))
+! there are a few ways to define this market, it could also be an aggregate
+! of "Will <team> score?", or a product of the same.
+! gt(len(filter(goals, eq(team, home))), 0) *
+! gt(len(filter(goals, eq(team, away))), 0)
+
+CSFT: What will the score be at full time?
+! actually this includes all the goals, but it's simple to filter the goals
+! to include only those with periods < 3.
+map(partition(goals, team), len)
+
+NMTS: How many teams will score?
+! this gets you No-No, No-Yes, Yes-No, Yes-Yes (i.e. BSCO)
+! then 1=No-Yes+Yes-No
+gt(map(partition(goals, team), len), 0)
+? why is it better to define markets instead of using aggregates?
+
+WNTN: Will <team> win without the other team scoring?
+! aggregate of:
+and(gt(len(home), 0), eq(len(away), 0))
+
+WIMG: What will the diffence between home and away's goals be?
+sub(len(home), len(away))
+! partition can't be used here, 1) because it wouldn't handle more than 2
+! teams, 2) because we'd have to add some kind of reduction operation
+
+! if we have a distribution-like collection we can do n-way ranged markets.
+! we will need to handle these n-way markets in the algos because sports with
+! a large range of selections will be impractical to aggregate.
+
+INTS: Which team will score goal n?
+team(nth(goals, n))
+
+RNXT: Which team will score n goals first?
+! this one would work for set-sports because we have to play 2n-1 sets.  it
+! doesn't work for football because both teams could score fewer than n
+! goals.  also this only works for two teams?
+max(partition(slice(goals, 0, 2 * n - 1), team))
+! given(cond, expr) returns expr if cond is true, :nil otherwise
+! any(mapping, pred) returns true if any value in the mapping meets pred
+given(a-team-has-n-or-more-goals, ...)
+given(any(map(partition(goals, team), len), ge(n)), ...)
+! nth goal scorer implicitly has a given(ge(len(goals), n), ...)?
+
+HWFB: Will the home team win from behind?
+and(eq(most(goals), {:home}),
+    any(accumulate(most, goals), eq({:home})))
+! accumulate(expr, coll) is [expr(coll[0:1]), ... expr(coll[0:n])]
+? is it okay to overload any for collections?
+! everything about this feels contrived.  there must be a better primitive
+! for working out if we have ever been in some state.
+? ever(pred, coll) i.e. ever(eq(most, {:away}), goals)
+
+FGSC: Which player will score the first goal?
+player(nth(goal, 0))
